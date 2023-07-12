@@ -20,25 +20,28 @@ function App() {
 
   async function getTokenBalance() {
     const config = {
-      apiKey: '<-- COPY-PASTE YOUR ALCHEMY API KEY HERE -->',
+      apiKey: 'ohn4Q_1eiui7MhHizLJZ5FaAX1buqHVB',
       network: Network.ETH_MAINNET,
     };
 
     const alchemy = new Alchemy(config);
     const data = await alchemy.core.getTokenBalances(userAddress);
-
-    setResults(data);
+    //console.log(data);
 
     const tokenDataPromises = [];
+    const _promises = [];
 
     for (let i = 0; i < data.tokenBalances.length; i++) {
       const tokenData = alchemy.core.getTokenMetadata(
         data.tokenBalances[i].contractAddress
-      );
-      tokenDataPromises.push(tokenData);
+      ).then(v => { tokenDataPromises[data.tokenBalances[i].contractAddress] = v })
+        .catch(e => console.log(e));
+      _promises.push(tokenData);
     }
 
-    setTokenDataObjects(await Promise.all(tokenDataPromises));
+    setResults(data);
+    await Promise.all(_promises);
+    setTokenDataObjects(tokenDataPromises);
     setHasQueried(true);
   }
   return (
@@ -75,6 +78,8 @@ function App() {
           p={4}
           bgColor="white"
           fontSize={24}
+          name="ethAddress"
+          id="ethAddress"
         />
         <Button fontSize={20} onClick={getTokenBalance} mt={36} bgColor="blue">
           Check ERC-20 Token Balances
@@ -84,28 +89,34 @@ function App() {
 
         {hasQueried ? (
           <SimpleGrid w={'90vw'} columns={4} spacing={24}>
-            {results.tokenBalances.map((e, i) => {
-              return (
+            {results.tokenBalances.map((e) => {
+              //console.log(e.contractAddress + " : " + tokenDataObjects[e.contractAddress].symbol + " decimals : " + tokenDataObjects[e.contractAddress].decimals);
+              //console.log(tokenDataObjects[e.contractAddress]);
+              return tokenDataObjects[e.contractAddress] ? (
                 <Flex
                   flexDir={'column'}
                   color="white"
-                  bg="blue"
+                  bg="ffffff"
                   w={'20vw'}
-                  key={e.id}
+                  key={e.contractAddress}
                 >
                   <Box>
-                    <b>Symbol:</b> ${tokenDataObjects[i].symbol}&nbsp;
+                    <b>Symbol:</b> ${tokenDataObjects[e.contractAddress].symbol}&nbsp;
                   </Box>
                   <Box>
                     <b>Balance:</b>&nbsp;
                     {Utils.formatUnits(
                       e.tokenBalance,
-                      tokenDataObjects[i].decimals
+                      tokenDataObjects[e.contractAddress].decimals
                     )}
                   </Box>
-                  <Image src={tokenDataObjects[i].logo} />
+                  <Image 
+                    borderRadius='100%'
+                    boxSize='50px'
+                    src={tokenDataObjects[e.contractAddress].logo} />
                 </Flex>
-              );
+              )
+                : <Flex><Box>{e.contractAddress}</Box></Flex>;
             })}
           </SimpleGrid>
         ) : (
